@@ -1,0 +1,186 @@
+# Zaawansowany System Tradingowy BTC - Python Dependencies
+# Generated: 2025-10-05
+
+# ==============================================================================
+# CORE FRAMEWORKS
+# ==============================================================================
+
+# Real-time stream processing
+pathway==0.11.3
+
+# Vector database client
+qdrant-client==1.7.0
+
+# ML experiment tracking
+mlflow==2.10.2
+
+# Advanced backtesting
+backtrader==1.9.78.123
+
+# Hyperparameter optimization
+optuna==3.5.0
+
+# Agent-based modeling
+mesa==2.2.1
+
+# Reinforcement Learning
+ray[rllib]==2.9.2
+gymnasium==0.29.1
+torch==2.1.2
+
+# Data validation
+great-expectations==0.18.8
+
+# Trading framework
+freqtrade==2024.1
+ccxt==4.2.25
+
+# ==============================================================================
+# DATA & PROCESSING
+# ==============================================================================
+
+# Data manipulation
+pandas==2.1.4
+numpy==1.26.3
+scipy==1.11.4
+
+# Time series
+ta-lib==0.4.28
+pandas-ta==0.3.14b0
+
+# Data validation & quality
+jsonschema==4.20.0
+pydantic==2.5.3
+
+# ==============================================================================
+# DATABASE & CACHING
+# ==============================================================================
+
+# PostgreSQL
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+
+# Redis
+redis==5.0.1
+hiredis==2.3.2
+
+# ==============================================================================
+# WEB & API
+# ==============================================================================
+
+# HTTP clients
+requests==2.31.0
+aiohttp==3.9.1
+websockets==12.0
+
+# FastAPI (dla API endpoints)
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# ==============================================================================
+# MONITORING & LOGGING
+# ==============================================================================
+
+# Prometheus monitoring
+prometheus-client==0.19.0
+
+# Structured logging
+structlog==24.1.0
+python-json-logger==2.0.7
+
+# Performance profiling
+py-spy==0.3.14
+
+# ==============================================================================
+# MACHINE LEARNING
+# ==============================================================================
+
+# ML frameworks
+scikit-learn==1.4.0
+xgboost==2.0.3
+lightgbm==4.2.0
+catboost==1.2.2
+
+# Deep Learning
+tensorflow==2.15.0
+
+# Feature engineering
+featuretools==1.29.0
+
+# Model serialization
+joblib==1.3.2
+dill==0.3.7
+
+# ==============================================================================
+# PLOTTING & VISUALIZATION
+# ==============================================================================
+
+matplotlib==3.8.2
+plotly==5.18.0
+seaborn==0.13.1
+
+# ==============================================================================
+# UTILITIES
+# ==============================================================================
+
+# Configuration
+python-dotenv==1.0.0
+pyyaml==6.0.1
+toml==0.10.2
+
+# Date/time
+python-dateutil==2.8.2
+pytz==2023.3.post1
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# Code quality
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+isort==5.13.2
+
+# Typing
+types-requests==2.31.0.20240106
+types-redis==4.6.0.20240106
+
+# Progress bars
+tqdm==4.66.1
+
+# Retry logic
+tenacity==8.2.3
+
+# Secrets management
+cryptography==42.0.0
+
+# ==============================================================================
+# EXCHANGE CONNECTORS
+# ==============================================================================
+
+# Binance
+python-binance==1.0.19
+
+# ==============================================================================
+# DEVELOPMENT TOOLS
+# ==============================================================================
+
+# Jupyter for analysis
+jupyter==1.0.0
+ipython==8.20.0
+notebook==7.0.6
+
+# Memory profiling
+memory-profiler==0.61.0
+
+# ==============================================================================
+# OPTIONAL: GPU Support (uncomment if using CUDA)
+# ==============================================================================
+
+# torch-cuda==2.1.2+cu118
+# tensorflow-gpu==2.15.0
+

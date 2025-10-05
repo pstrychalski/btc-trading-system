@@ -1,0 +1,236 @@
+# ==============================================================================
+# ENVIRONMENT & SECRETS
+# ==============================================================================
+.env
+.env.local
+.env.*.local
+.env.production
+secrets/
+*.pem
+*.key
+
+# ==============================================================================
+# RAILWAY & DEPLOYMENT
+# ==============================================================================
+.railway/
+
+# ==============================================================================
+# PYTHON
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Byte-compiled / optimized / DLL files
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==============================================================================
+# NODE / JAVASCRIPT (dla ewentualnych frontend tools)
+# ==============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# ==============================================================================
+# DATA & MODELS
+# ==============================================================================
+
+# Trading data
+services/freqtrade/user_data/data/
+services/freqtrade/user_data/backtest_results/
+services/freqtrade/user_data/hyperopt_results/
+services/freqtrade/user_data/plot/
+
+# ML Models & checkpoints
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+*.ckpt
+*.pth
+*.pt
+services/rl-agent/checkpoints/
+services/backtest-engine/models/
+mlruns/
+mlflow-artifacts/
+
+# Data files
+*.csv
+*.parquet
+*.feather
+*.pickle
+data/
+historical_data/
+
+# Qdrant data
+services/qdrant/storage/
+qdrant_storage/
+
+# ==============================================================================
+# LOGS & MONITORING
+# ==============================================================================
+logs/
+*.log
+*.log.*
+*.out
+*.err
+
+# Prometheus data
+prometheus_data/
+
+# Grafana data
+grafana_data/
+
+# ==============================================================================
+# DATABASE
+# ==============================================================================
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+redis_data/
+
+# ==============================================================================
+# TESTING
+# ==============================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+coverage.xml
+*.cover
+.cache
+nosetests.xml
+
+# ==============================================================================
+# JUPYTER NOTEBOOKS
+# ==============================================================================
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+*.ipynb
+
+# Jupyter
+jupyter_runtime/
+.jupyter/
+
+# ==============================================================================
+# IDE & EDITORS
+# ==============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*.swn
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ==============================================================================
+# OS FILES
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ==============================================================================
+# DOCKER
+# ==============================================================================
+docker-compose.override.yml
+.dockerignore
+
+# ==============================================================================
+# BACKUPS
+# ==============================================================================
+*.bak
+*.backup
+*.old
+*.orig
+
+# ==============================================================================
+# TEMPORARY FILES
+# ==============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+
+# ==============================================================================
+# GREAT EXPECTATIONS
+# ==============================================================================
+uncommitted/
+great_expectations/.ge_store_backend_id
+
+# ==============================================================================
+# MLFLOW
+# ==============================================================================
+mlruns/
+mlartifacts/
+mlflow.db
+
+# ==============================================================================
+# RAY
+# ==============================================================================
+/tmp/ray/
+
+# ==============================================================================
+# MISC
+# ==============================================================================
+.env.example.local
+TODO.md
+NOTES.md
+scratchpad/
+

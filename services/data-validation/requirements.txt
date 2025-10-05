@@ -1,0 +1,22 @@
+# Data Validation Service Dependencies
+
+# Core
+great-expectations==0.18.8
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.25
+redis==5.0.1
+
+# Data processing
+pandas==2.1.4
+numpy==1.26.3
+
+# Utilities
+python-dotenv==1.0.0
+structlog==24.1.0
+requests==2.31.0
+

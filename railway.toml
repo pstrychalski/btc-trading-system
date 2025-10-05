@@ -1,0 +1,206 @@
+# ==============================================================================
+# Railway.app Deployment Configuration
+# Zaawansowany System Tradingowy BTC
+# ==============================================================================
+
+# Service definitions - each can be deployed independently
+
+# ==============================================================================
+# DATA LAYER
+# ==============================================================================
+
+[[service]]
+name = "postgres"
+source = "postgres:16"
+
+[service.env]
+POSTGRES_DB = "trading_db"
+POSTGRES_USER = "trading_user"
+
+[service.healthcheck]
+path = "/"
+port = 5432
+protocol = "tcp"
+
+[[service]]
+name = "redis"
+source = "redis:7-alpine"
+
+[service.healthcheck]
+path = "/"
+port = 6379
+protocol = "tcp"
+
+[[service]]
+name = "qdrant"
+source = "services/qdrant"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "./qdrant"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+
+[service.env]
+QDRANT__SERVICE__GRPC_PORT = "6334"
+QDRANT__SERVICE__HTTP_PORT = "6333"
+
+# ==============================================================================
+# MONITORING LAYER
+# ==============================================================================
+
+[[service]]
+name = "mlflow"
+source = "services/mlflow"
+
+[service.build]
+builder = "NIXPACKS"
+
+[service.deploy]
+startCommand = "mlflow server --backend-store-uri ${DATABASE_URL} --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/health"
+
+[service.env]
+MLFLOW_TRACKING_URI = "http://mlflow:5000"
+
+[[service]]
+name = "grafana"
+source = "grafana/grafana:latest"
+
+[service.deploy]
+healthcheckPath = "/api/health"
+
+# ==============================================================================
+# DATA COLLECTION & VALIDATION
+# ==============================================================================
+
+[[service]]
+name = "data-collector"
+source = "services/data-collector"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "python collector.py"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[service.env]
+EXCHANGE = "binance"
+SYMBOLS = "BTC/USDT,ETH/USDT"
+
+[[service]]
+name = "data-validation"
+source = "services/data-validation"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "uvicorn api:app --host 0.0.0.0 --port 8082"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/health"
+
+# ==============================================================================
+# PROCESSING LAYER
+# ==============================================================================
+
+[[service]]
+name = "pathway"
+source = "services/pathway"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "python pipeline_complete.py"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/health"
+
+# ==============================================================================
+# INTELLIGENCE LAYER
+# ==============================================================================
+
+[[service]]
+name = "market-memory"
+source = "services/market-memory"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "uvicorn api:app --host 0.0.0.0 --port 8083"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/health"
+
+[[service]]
+name = "backtest-engine"
+source = "services/backtest-engine"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "uvicorn api:app --host 0.0.0.0 --port 8084"
+restartPolicyType = "ON_FAILURE"
+
+[[service]]
+name = "market-sim"
+source = "services/market-sim"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "uvicorn api:app --host 0.0.0.0 --port 8085"
+restartPolicyType = "ON_FAILURE"
+
+[[service]]
+name = "rl-agent"
+source = "services/rl-agent"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "python train_agent.py"
+restartPolicyType = "ON_FAILURE"
+
+[service.resources]
+memory = "2GB"
+cpu = "1"
+
+# ==============================================================================
+# EXECUTION LAYER
+# ==============================================================================
+
+[[service]]
+name = "freqtrade"
+source = "services/freqtrade"
+
+[service.build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[service.deploy]
+startCommand = "freqtrade trade --config user_data/config.json --strategy MemoryEnhancedStrategy"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/api/v1/ping"
+
+[service.resources]
+memory = "1GB"
+cpu = "0.5"
+

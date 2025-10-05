@@ -1,0 +1,338 @@
+version: '3.8'
+
+# ==============================================================================
+# ZAAWANSOWANY SYSTEM TRADINGOWY BTC
+# Local Development Environment
+# ==============================================================================
+
+services:
+  # ============================================================================
+  # DATA LAYER - Databases & Message Brokers
+  # ============================================================================
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: btc-postgres
+    environment:
+      POSTGRES_DB: trading_db
+      POSTGRES_USER: trading_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trading-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: btc-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - trading-network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: btc-qdrant
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__SERVICE__HTTP_PORT: 6333
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trading-network
+
+  # ============================================================================
+  # MONITORING LAYER
+  # ============================================================================
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.2
+    container_name: btc-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      BACKEND_STORE_URI: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+      DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+      MLFLOW_TRACKING_URI: http://localhost:5000
+    volumes:
+      - mlflow_data:/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - trading-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: btc-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./services/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - trading-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: btc-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./services/monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+      - ./services/monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    depends_on:
+      - prometheus
+    networks:
+      - trading-network
+
+  # ============================================================================
+  # DATA COLLECTION & VALIDATION
+  # ============================================================================
+
+  data-collector:
+    build:
+      context: ./services/data-collector
+      dockerfile: Dockerfile
+    container_name: btc-data-collector
+    environment:
+      REDIS_URL: redis://redis:6379
+      EXCHANGE: binance
+      SYMBOLS: BTC/USDT,ETH/USDT
+      POSTGRES_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      data-validation:
+        condition: service_started
+    networks:
+      - trading-network
+    restart: unless-stopped
+
+  data-validation:
+    build:
+      context: ./services/data-validation
+      dockerfile: Dockerfile
+    container_name: btc-data-validation
+    environment:
+      POSTGRES_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/data-validation:/app
+    networks:
+      - trading-network
+
+  # ============================================================================
+  # PROCESSING LAYER
+  # ============================================================================
+
+  pathway:
+    build:
+      context: ./services/pathway
+      dockerfile: Dockerfile
+    container_name: btc-pathway
+    environment:
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+      - qdrant
+      - mlflow
+    volumes:
+      - ./services/pathway:/app
+    networks:
+      - trading-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # INTELLIGENCE LAYER
+  # ============================================================================
+
+  market-memory:
+    build:
+      context: ./services/market-memory
+      dockerfile: Dockerfile
+    container_name: btc-market-memory
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8083:8083"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/market-memory:/app
+    networks:
+      - trading-network
+    restart: unless-stopped
+
+  backtest-engine:
+    build:
+      context: ./services/backtest-engine
+      dockerfile: Dockerfile
+    container_name: btc-backtest-engine
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      POSTGRES_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8084:8084"
+    depends_on:
+      - mlflow
+      - postgres
+      - qdrant
+    volumes:
+      - ./services/backtest-engine:/app
+      - backtest_data:/data
+    networks:
+      - trading-network
+
+  market-sim:
+    build:
+      context: ./services/market-sim
+      dockerfile: Dockerfile
+    container_name: btc-market-sim
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8085:8085"
+    depends_on:
+      - mlflow
+    volumes:
+      - ./services/market-sim:/app
+    networks:
+      - trading-network
+
+  rl-agent:
+    build:
+      context: ./services/rl-agent
+      dockerfile: Dockerfile
+    container_name: btc-rl-agent
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+      RAY_ADDRESS: auto
+    ports:
+      - "8086:8086"
+      - "8265:8265"  # Ray dashboard
+    depends_on:
+      - mlflow
+      - redis
+      - qdrant
+    volumes:
+      - ./services/rl-agent:/app
+      - rl_checkpoints:/checkpoints
+    networks:
+      - trading-network
+    # Uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ============================================================================
+  # EXECUTION LAYER
+  # ============================================================================
+
+  freqtrade:
+    build:
+      context: ./services/freqtrade
+      dockerfile: Dockerfile
+    container_name: btc-freqtrade
+    environment:
+      REDIS_URL: redis://redis:6379
+      PATHWAY_URL: http://pathway:8081
+      MARKET_MEMORY_URL: http://market-memory:8083
+      RL_AGENT_URL: http://rl-agent:8086
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8080:8080"  # Freqtrade API
+    depends_on:
+      - redis
+      - pathway
+      - market-memory
+    volumes:
+      - ./services/freqtrade/user_data:/freqtrade/user_data
+      - freqtrade_data:/freqtrade/data
+    networks:
+      - trading-network
+    restart: unless-stopped
+
+# ==============================================================================
+# NETWORKS & VOLUMES
+# ==============================================================================
+
+networks:
+  trading-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  mlflow_data:
+  prometheus_data:
+  grafana_data:
+  backtest_data:
+  rl_checkpoints:
+  freqtrade_data:
+
