@@ -138,18 +138,26 @@ services:
       context: ./services/data-collector
       dockerfile: Dockerfile
     container_name: btc-data-collector
+    ports:
+      - "8001:8001"
     environment:
+      PORT: 8001
+      SYMBOLS: BTCUSDT,ETHUSDT
+      INTERVALS: 1m,5m,15m,1h
       REDIS_URL: redis://redis:6379
-      EXCHANGE: binance
-      SYMBOLS: BTC/USDT,ETH/USDT
-      POSTGRES_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+      VALIDATION_SERVICE_URL: http://data-validation:8082
+      ENVIRONMENT: development
     depends_on:
       redis:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
       data-validation:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - trading-network
     restart: unless-stopped
