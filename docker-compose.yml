@@ -211,23 +211,52 @@ services:
   # INTELLIGENCE LAYER
   # ============================================================================
 
+  optuna-optimizer:
+    build:
+      context: .
+      dockerfile: services/optuna-optimizer/Dockerfile
+    container_name: btc-optuna-optimizer
+    environment:
+      PORT: 8003
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      DATABASE_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+    ports:
+      - "8003:8003"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - trading-network
+    restart: unless-stopped
+
   market-memory:
     build:
-      context: ./services/market-memory
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/market-memory/Dockerfile
     container_name: btc-market-memory
     environment:
+      PORT: 8004
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: redis://redis:6379
     ports:
-      - "8083:8083"
+      - "8004:8004"
     depends_on:
       qdrant:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./services/market-memory:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - trading-network
     restart: unless-stopped
