@@ -234,24 +234,32 @@ services:
 
   backtest-engine:
     build:
-      context: ./services/backtest-engine
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/backtest-engine/Dockerfile
     container_name: btc-backtest-engine
     environment:
+      PORT: 8002
       MLFLOW_TRACKING_URI: http://mlflow:5000
-      POSTGRES_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
+      DATABASE_URL: postgresql://trading_user:${POSTGRES_PASSWORD:-changeme123}@postgres:5432/trading_db
       QDRANT_URL: http://qdrant:6333
     ports:
-      - "8084:8084"
+      - "8002:8002"
     depends_on:
-      - mlflow
-      - postgres
-      - qdrant
+      mlflow:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     volumes:
-      - ./services/backtest-engine:/app
       - backtest_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - trading-network
+    restart: unless-stopped
 
   market-sim:
     build:
