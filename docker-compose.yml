@@ -290,44 +290,83 @@ services:
       - trading-network
     restart: unless-stopped
 
-  market-sim:
+  mesa-simulation:
     build:
-      context: ./services/market-sim
-      dockerfile: Dockerfile
-    container_name: btc-market-sim
+      context: .
+      dockerfile: services/mesa-simulation/Dockerfile
+    container_name: btc-mesa-simulation
     environment:
+      PORT: 8005
       MLFLOW_TRACKING_URI: http://mlflow:5000
     ports:
-      - "8085:8085"
+      - "8005:8005"
     depends_on:
-      - mlflow
-    volumes:
-      - ./services/market-sim:/app
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - trading-network
+    restart: unless-stopped
+
+  pathway-pipeline:
+    build:
+      context: .
+      dockerfile: services/pathway-pipeline/Dockerfile
+    container_name: btc-pathway-pipeline
+    environment:
+      PORT: 8006
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8006:8006"
+    depends_on:
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - trading-network
+    restart: unless-stopped
 
   rl-agent:
     build:
-      context: ./services/rl-agent
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/rl-agent/Dockerfile
     container_name: btc-rl-agent
     environment:
+      PORT: 8007
       MLFLOW_TRACKING_URI: http://mlflow:5000
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
-      RAY_ADDRESS: auto
     ports:
-      - "8086:8086"
-      - "8265:8265"  # Ray dashboard
+      - "8007:8007"
     depends_on:
-      - mlflow
-      - redis
-      - qdrant
+      mlflow:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     volumes:
-      - ./services/rl-agent:/app
       - rl_checkpoints:/checkpoints
     networks:
       - trading-network
+    restart: unless-stopped
     # Uncomment for GPU support
     # deploy:
     #   resources:
