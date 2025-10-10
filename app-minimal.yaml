@@ -1,0 +1,66 @@
+name: btc-trading-system-minimal
+region: nyc
+services:
+  # 1. Data Validation Service (minimal)
+  - name: data-validation
+    source_dir: services/data-validation
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "8082"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 2. MLflow Tracking Service (minimal)
+  - name: mlflow-tracking
+    source_dir: services/mlflow-tracking
+    run_command: ./entrypoint.sh
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "5000"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://localhost:5000"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 3. Data Collector Service (minimal)
+  - name: data-collector
+    source_dir: services/data-collector
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "8001"
+    - key: SYMBOLS
+      value: "BTCUSDT"
+    - key: INTERVALS
+      value: "1m"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
