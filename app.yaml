@@ -1,0 +1,250 @@
+name: btc-trading-system
+region: nyc
+services:
+  # 1. Data Validation Service
+  - name: data-validation
+    source_dir: services/data-validation
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: DATABASE_URL
+      value: ${btc-postgres.DATABASE_URL}
+    - key: PORT
+      value: "8082"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 2. MLflow Tracking Service
+  - name: mlflow-tracking
+    source_dir: services/mlflow-tracking
+    run_command: ./entrypoint.sh
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: DATABASE_URL
+      value: ${btc-postgres.DATABASE_URL}
+    - key: PORT
+      value: "5000"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://localhost:5000"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 3. Data Collector Service
+  - name: data-collector
+    source_dir: services/data-collector
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "8001"
+    - key: SYMBOLS
+      value: "BTCUSDT,ETHUSDT"
+    - key: INTERVALS
+      value: "1m,5m,15m,1h"
+    - key: REDIS_URL
+      value: ${btc-redis.DATABASE_URL}
+    - key: VALIDATION_SERVICE_URL
+      value: "http://data-validation:8082"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 4. Backtest Engine Service
+  - name: backtest-engine
+    source_dir: services/backtest-engine
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+    - key: PORT
+      value: "8002"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://mlflow-tracking:5000"
+    - key: DATABASE_URL
+      value: ${btc-postgres.DATABASE_URL}
+    - key: QDRANT_URL
+      value: "http://qdrant-server:6333"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 5. Optuna Optimizer Service
+  - name: optuna-optimizer
+    source_dir: services/optuna-optimizer
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+    - key: PORT
+      value: "8003"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://mlflow-tracking:5000"
+    - key: DATABASE_URL
+      value: ${btc-postgres.DATABASE_URL}
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 6. Market Memory Service
+  - name: market-memory
+    source_dir: services/market-memory
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+    - key: PORT
+      value: "8004"
+    - key: QDRANT_URL
+      value: "http://qdrant-server:6333"
+    - key: REDIS_URL
+      value: ${btc-redis.DATABASE_URL}
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 7. Mesa Simulation Service
+  - name: mesa-simulation
+    source_dir: services/mesa-simulation
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+    - key: PORT
+      value: "8005"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://mlflow-tracking:5000"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 8. Pathway Pipeline Service
+  - name: pathway-pipeline
+    source_dir: services/pathway-pipeline
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+    - key: PORT
+      value: "8006"
+    - key: REDIS_URL
+      value: ${btc-redis.DATABASE_URL}
+    - key: QDRANT_URL
+      value: "http://qdrant-server:6333"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 9. RL Agent Service
+  - name: rl-agent
+    source_dir: services/rl-agent
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-s
+    envs:
+    - key: PORT
+      value: "8007"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://mlflow-tracking:5000"
+    - key: REDIS_URL
+      value: ${btc-redis.DATABASE_URL}
+    - key: QDRANT_URL
+      value: "http://qdrant-server:6333"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # 10. Freqtrade Integration Service
+  - name: freqtrade-integration
+    source_dir: services/freqtrade-integration
+    run_command: ./entrypoint.sh
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-s
+    envs:
+    - key: BINANCE_API_KEY
+      value: "your_binance_api_key"
+    - key: BINANCE_SECRET_KEY
+      value: "your_binance_secret_key"
+    - key: MARKET_MEMORY_URL
+      value: "http://market-memory:8004"
+    - key: RL_AGENT_URL
+      value: "http://rl-agent:8007"
+    - key: REDIS_URL
+      value: ${btc-redis.DATABASE_URL}
+    - key: MLFLOW_TRACKING_URI
+      value: "http://mlflow-tracking:5000"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 60
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+# Databases
+databases:
+  - name: btc-postgres
+    engine: PG
+    num_nodes: 1
+    size: db-s-1vcpu-1gb
+    region: nyc1
+
+  - name: btc-redis
+    engine: REDIS
+    num_nodes: 1
+    size: db-s-1vcpu-1gb
+    region: nyc1
