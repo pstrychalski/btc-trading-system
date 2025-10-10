@@ -4,6 +4,10 @@ services:
   # 1. Data Validation Service (minimal)
   - name: data-validation
     source_dir: services/data-validation
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
     run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
     environment_slug: python
     instance_count: 1
@@ -20,10 +24,16 @@ services:
       timeout_seconds: 5
       success_threshold: 1
       failure_threshold: 3
+    routes:
+    - path: /data-validation
 
   # 2. MLflow Tracking Service (minimal)
   - name: mlflow-tracking
     source_dir: services/mlflow-tracking
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
     run_command: ./entrypoint.sh
     environment_slug: python
     instance_count: 1
@@ -40,10 +50,16 @@ services:
       timeout_seconds: 5
       success_threshold: 1
       failure_threshold: 3
+    routes:
+    - path: /mlflow-tracking
 
   # 3. Data Collector Service (minimal)
   - name: data-collector
     source_dir: services/data-collector
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
     run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
     environment_slug: python
     instance_count: 1
@@ -64,3 +80,5 @@ services:
       timeout_seconds: 5
       success_threshold: 1
       failure_threshold: 3
+    routes:
+    - path: /data-collector
