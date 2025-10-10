@@ -15,6 +15,8 @@ services:
     envs:
     - key: PORT
       value: "8082"
+    - key: DATABASE_URL
+      value: "${DATABASE_URL}"
     - key: ENVIRONMENT
       value: "production"
     health_check:
@@ -41,6 +43,10 @@ services:
     envs:
     - key: PORT
       value: "5000"
+    - key: DATABASE_URL
+      value: "${DATABASE_URL}"
+    - key: ARTIFACT_ROOT
+      value: "/app/mlruns"
     - key: MLFLOW_TRACKING_URI
       value: "http://localhost:5000"
     health_check:
@@ -71,6 +77,8 @@ services:
       value: "BTCUSDT"
     - key: INTERVALS
       value: "1m"
+    - key: REDIS_URL
+      value: "${REDIS_URL}"
     - key: ENVIRONMENT
       value: "production"
     health_check:
