@@ -92,6 +92,7 @@ async def lifespan(app: FastAPI):
     )
     
     # Initialize collector with fallback logic
+    binance_connected = False
     try:
         # Try Binance first
         collector = BinanceDataCollector(
@@ -100,8 +101,11 @@ async def lifespan(app: FastAPI):
             redis_url=settings.redis_url,
             validation_service_url=settings.validation_service_url,
         )
-        await collector.connect()
-        logger.info("Binance collector initialized successfully")
+        binance_connected = await collector.connect()
+        if binance_connected:
+            logger.info("Binance collector initialized successfully")
+        else:
+            raise Exception("Binance connection failed")
     except Exception as e:
         logger.warning("Binance collector failed, using CoinGecko fallback", error=str(e))
         # Fallback to CoinGecko
