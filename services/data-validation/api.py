@@ -16,6 +16,8 @@ import uuid
 
 from validator import get_validator
 from database import get_db_manager
+import backtrader as bt
+import numpy as np
 
 # Configure structured logging
 structlog.configure(
@@ -481,6 +483,99 @@ async def global_exception_handler(request, exc):
         }
     )
 
+
+# Simple Moving Average Strategy
+class MovingAverageStrategy(bt.Strategy):
+    params = (
+        ('ma_period', 20),
+    )
+    
+    def __init__(self):
+        self.ma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.params.ma_period)
+        self.crossover = bt.indicators.CrossOver(self.data.close, self.ma)
+    
+    def next(self):
+        if not self.position:
+            if self.crossover > 0:  # Price crosses above MA
+                self.buy()
+        else:
+            if self.crossover < 0:  # Price crosses below MA
+                self.sell()
+
+@app.post("/backtest")
+async def run_backtest(
+    strategy: str = "MovingAverage",
+    start_date: str = "2024-09-11",
+    end_date: str = "2024-10-11",
+    initial_cash: float = 10000.0
+):
+    """Run simple backtest"""
+    try:
+        logger.info("Starting backtest", strategy=strategy, start_date=start_date, end_date=end_date)
+        
+        # Get data from database
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not initialized")
+        
+        query = """
+        SELECT timestamp, open, high, low, close, volume 
+        FROM market_data 
+        WHERE symbol = 'BTCUSDT' 
+        AND timestamp BETWEEN %s AND %s
+        ORDER BY timestamp
+        """
+        
+        df = db_manager.execute_query(query, (start_date, end_date))
+        if df.empty:
+            raise HTTPException(status_code=404, detail="No data found for the specified period")
+        
+        # Create Backtrader data feed
+        data = bt.feeds.PandasData(
+            dataname=df,
+            datetime='timestamp',
+            open='open',
+            high='high',
+            low='low',
+            close='close',
+            volume='volume'
+        )
+        
+        # Create Cerebro engine
+        cerebro = bt.Cerebro()
+        cerebro.adddata(data)
+        cerebro.addstrategy(MovingAverageStrategy)
+        cerebro.broker.setcash(initial_cash)
+        cerebro.broker.setcommission(commission=0.001)  # 0.1% commission
+        
+        # Run backtest
+        initial_value = cerebro.broker.getvalue()
+        results = cerebro.run()
+        final_value = cerebro.broker.getvalue()
+        
+        # Calculate metrics
+        total_return = (final_value - initial_value) / initial_value * 100
+        trades = len([x for x in results[0] if hasattr(x, 'trades')])
+        
+        logger.info("Backtest completed", 
+                  initial_value=initial_value, 
+                  final_value=final_value, 
+                  total_return=total_return)
+        
+        return {
+            "strategy": strategy,
+            "start_date": start_date,
+            "end_date": end_date,
+            "initial_cash": initial_value,
+            "final_value": final_value,
+            "total_return_percent": round(total_return, 2),
+            "trades": trades,
+            "data_points": len(df),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error("Backtest failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
