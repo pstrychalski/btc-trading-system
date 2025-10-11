@@ -15,6 +15,7 @@ from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATE
 from starlette.responses import Response
 
 from collector import BinanceDataCollector
+from alternative_collector import CoinGeckoDataCollector
 
 # Configure logging
 structlog.configure(
@@ -75,7 +76,7 @@ collector_running = Gauge(
 )
 
 # Global collector instance
-collector: BinanceDataCollector = None
+collector = None
 collector_task: asyncio.Task = None
 
 
@@ -90,16 +91,31 @@ async def lifespan(app: FastAPI):
         intervals=settings.get_intervals_list()
     )
     
-    # Initialize collector
-    collector = BinanceDataCollector(
-        symbols=settings.get_symbols_list(),
-        intervals=settings.get_intervals_list(),
-        redis_url=settings.redis_url,
-        validation_service_url=settings.validation_service_url,
-    )
+    # Initialize collector with fallback logic
+    try:
+        # Try Binance first
+        collector = BinanceDataCollector(
+            symbols=settings.get_symbols_list(),
+            intervals=settings.get_intervals_list(),
+            redis_url=settings.redis_url,
+            validation_service_url=settings.validation_service_url,
+        )
+        await collector.connect()
+        logger.info("Binance collector initialized successfully")
+    except Exception as e:
+        logger.warning("Binance collector failed, using CoinGecko fallback", error=str(e))
+        # Fallback to CoinGecko
+        collector = CoinGeckoDataCollector(
+            symbols=settings.get_symbols_list(),
+            intervals=settings.get_intervals_list(),
+            redis_url=settings.redis_url,
+            validation_service_url=settings.validation_service_url,
+        )
+        await collector.connect()
+        logger.info("CoinGecko collector initialized as fallback")
     
     # Start collector in background
-    collector_task = asyncio.create_task(collector.start())
+    collector_task = asyncio.create_task(collector.start_collection())
     collector_running.set(1)
     
     logger.info("application_started")
