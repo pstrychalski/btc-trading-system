@@ -194,6 +194,20 @@ class DatabaseManager:
         finally:
             session.close()
 
+    def execute_query(self, query: str, params: tuple = None) -> 'pd.DataFrame':
+        """Execute SQL query and return DataFrame"""
+        import pandas as pd
+        
+        try:
+            if params:
+                df = pd.read_sql(query, self.engine, params=params)
+            else:
+                df = pd.read_sql(query, self.engine)
+            return df
+        except Exception as e:
+            logger.error("Query execution failed", error=str(e), query=query)
+            raise
+
 
 # Singleton instance
 _db_manager = None
