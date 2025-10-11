@@ -1,0 +1,234 @@
+name: btc-trading-system-full
+services:
+  # Data Collection & Validation
+  - name: data-collector
+    source_dir: services/data-collector
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /data-collector
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: REDIS_URL
+        value: "${REDIS_URL}"
+
+  - name: data-validation
+    source_dir: services/data-validation
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /data-validation
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8082"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+
+  # ML & Experiment Tracking
+  - name: mlflow-tracking
+    source_dir: services/mlflow-tracking
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: ./entrypoint.sh
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /mlflow-tracking
+    envs:
+      - key: PORT
+        value: "5000"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: ARTIFACT_ROOT
+        value: "/app/mlruns"
+      - key: MLFLOW_TRACKING_URI
+        value: "http://mlflow-tracking:5000"
+
+  # Backtesting & Optimization
+  - name: backtest-engine
+    source_dir: services/backtest-engine
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /backtest-engine
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8083"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: MLFLOW_TRACKING_URI
+        value: "http://mlflow-tracking:5000"
+
+  - name: optuna-optimizer
+    source_dir: services/optuna-optimizer
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /optuna-optimizer
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8084"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: MLFLOW_TRACKING_URI
+        value: "http://mlflow-tracking:5000"
+
+  # Market Memory & Vector Database
+  - name: market-memory
+    source_dir: services/market-memory
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /market-memory
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8085"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: QDRANT_URL
+        value: "http://qdrant:6333"
+
+  # Qdrant will be deployed separately as a Droplet
+
+  # Simulation & RL
+  - name: mesa-simulation
+    source_dir: services/mesa-simulation
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /mesa-simulation
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8086"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+
+  - name: rl-agent
+    source_dir: services/rl-agent
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /rl-agent
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8087"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: MLFLOW_TRACKING_URI
+        value: "http://mlflow-tracking:5000"
+
+  # Real-time Processing
+  - name: pathway-pipeline
+    source_dir: services/pathway-pipeline
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /pathway-pipeline
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8088"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: REDIS_URL
+        value: "${REDIS_URL}"
+      - key: QDRANT_URL
+        value: "http://qdrant:6333"
+
+  # Live Trading
+  - name: freqtrade-integration
+    source_dir: services/freqtrade-integration
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: python api.py
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /freqtrade-integration
+    envs:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8089"
+      - key: DATABASE_URL
+        value: "${DATABASE_URL}"
+      - key: REDIS_URL
+        value: "${REDIS_URL}"
+      - key: MLFLOW_TRACKING_URI
+        value: "http://mlflow-tracking:5000"
+      - key: QDRANT_URL
+        value: "http://qdrant:6333"
+
+# Databases are already created separately

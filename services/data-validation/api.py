@@ -484,23 +484,78 @@ async def global_exception_handler(request, exc):
     )
 
 
-# Simple Moving Average Strategy
+# Optimized Moving Average Strategy
 class MovingAverageStrategy(bt.Strategy):
     params = (
-        ('ma_period', 20),
+        ('fast_ma', 5),    # Fast MA
+        ('slow_ma', 15),   # Slow MA
     )
     
     def __init__(self):
-        self.ma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.params.ma_period)
-        self.crossover = bt.indicators.CrossOver(self.data.close, self.ma)
+        self.fast_ma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.params.fast_ma)
+        self.slow_ma = bt.indicators.SimpleMovingAverage(self.data.close, period=self.params.slow_ma)
+        self.crossover = bt.indicators.CrossOver(self.fast_ma, self.slow_ma)
+        
+        # Add RSI for additional confirmation
+        self.rsi = bt.indicators.RSI(self.data.close, period=14)
+        
+        # Track trades
+        self.trade_count = 0
+        
+    def next(self):
+        # Only trade if RSI is not in extreme zones
+        if self.rsi[0] > 30 and self.rsi[0] < 70:
+            if not self.position:
+                if self.crossover > 0:  # Fast MA crosses above Slow MA
+                    self.buy()
+                    self.trade_count += 1
+            else:
+                if self.crossover < 0:  # Fast MA crosses below Slow MA
+                    self.sell()
+                    self.trade_count += 1
+
+# RSI Strategy
+class RSIStrategy(bt.Strategy):
+    params = (
+        ('rsi_period', 14),
+        ('rsi_oversold', 30),
+        ('rsi_overbought', 70),
+    )
     
+    def __init__(self):
+        self.rsi = bt.indicators.RSI(self.data.close, period=self.params.rsi_period)
+        self.trade_count = 0
+        
     def next(self):
         if not self.position:
-            if self.crossover > 0:  # Price crosses above MA
+            if self.rsi[0] < self.params.rsi_oversold:  # Oversold - Buy
                 self.buy()
+                self.trade_count += 1
         else:
-            if self.crossover < 0:  # Price crosses below MA
+            if self.rsi[0] > self.params.rsi_overbought:  # Overbought - Sell
                 self.sell()
+                self.trade_count += 1
+
+# Bollinger Bands Strategy
+class BollingerBandsStrategy(bt.Strategy):
+    params = (
+        ('bb_period', 20),
+        ('bb_std', 2),
+    )
+    
+    def __init__(self):
+        self.bb = bt.indicators.BollingerBands(self.data.close, period=self.params.bb_period, devfactor=self.params.bb_std)
+        self.trade_count = 0
+        
+    def next(self):
+        if not self.position:
+            if self.data.close[0] < self.bb.lines.bot[0]:  # Price below lower band - Buy
+                self.buy()
+                self.trade_count += 1
+        else:
+            if self.data.close[0] > self.bb.lines.top[0]:  # Price above upper band - Sell
+                self.sell()
+                self.trade_count += 1
 
 @app.post("/backtest")
 async def run_backtest(
@@ -548,7 +603,17 @@ async def run_backtest(
         # Create Cerebro engine
         cerebro = bt.Cerebro()
         cerebro.adddata(data)
-        cerebro.addstrategy(MovingAverageStrategy)
+        
+        # Select strategy
+        if strategy == "MovingAverage":
+            cerebro.addstrategy(MovingAverageStrategy)
+        elif strategy == "RSI":
+            cerebro.addstrategy(RSIStrategy)
+        elif strategy == "BollingerBands":
+            cerebro.addstrategy(BollingerBandsStrategy)
+        else:
+            cerebro.addstrategy(MovingAverageStrategy)  # Default
+        
         cerebro.broker.setcash(initial_cash)
         cerebro.broker.setcommission(commission=0.001)  # 0.1% commission
         
@@ -581,6 +646,89 @@ async def run_backtest(
     except Exception as e:
         logger.error("Backtest failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Backtest failed: {str(e)}")
+
+@app.post("/backtest/compare")
+async def compare_strategies(
+    start_date: str = "2025-09-11",
+    end_date: str = "2025-10-11",
+    initial_cash: float = 10000.0
+):
+    """Compare all available strategies"""
+    strategies = ["MovingAverage", "RSI", "BollingerBands"]
+    results = []
+    
+    for strategy in strategies:
+        try:
+            # Get data from database
+            if not db_manager:
+                raise HTTPException(status_code=500, detail="Database not initialized")
+            
+            query = """
+            SELECT timestamp, open, high, low, close, volume 
+            FROM market_data 
+            WHERE symbol = 'BTCUSDT' 
+            AND timestamp BETWEEN %s::timestamp AND %s::timestamp
+            ORDER BY timestamp
+            """
+            
+            df = db_manager.execute_query(query, (start_date, end_date))
+            if df.empty:
+                continue
+            
+            # Create Backtrader data feed
+            data = bt.feeds.PandasData(
+                dataname=df,
+                datetime='timestamp',
+                open='open',
+                high='high',
+                low='low',
+                close='close',
+                volume='volume'
+            )
+            
+            # Create Cerebro engine
+            cerebro = bt.Cerebro()
+            cerebro.adddata(data)
+            
+            # Select strategy
+            if strategy == "MovingAverage":
+                cerebro.addstrategy(MovingAverageStrategy)
+            elif strategy == "RSI":
+                cerebro.addstrategy(RSIStrategy)
+            elif strategy == "BollingerBands":
+                cerebro.addstrategy(BollingerBandsStrategy)
+            
+            cerebro.broker.setcash(initial_cash)
+            cerebro.broker.setcommission(commission=0.001)
+            
+            # Run backtest
+            initial_value = cerebro.broker.getvalue()
+            results_backtest = cerebro.run()
+            final_value = cerebro.broker.getvalue()
+            
+            # Calculate metrics
+            total_return = (final_value - initial_value) / initial_value * 100
+            
+            results.append({
+                "strategy": strategy,
+                "initial_cash": initial_value,
+                "final_value": final_value,
+                "total_return_percent": round(total_return, 2),
+                "data_points": len(df)
+            })
+            
+        except Exception as e:
+            logger.error(f"Strategy {strategy} failed", error=str(e))
+            results.append({
+                "strategy": strategy,
+                "error": str(e)
+            })
+    
+    return {
+        "comparison": results,
+        "best_strategy": max(results, key=lambda x: x.get('total_return_percent', -999)) if results else None,
+        "timestamp": datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
     import uvicorn
