@@ -42,7 +42,7 @@ class DatabaseManager:
             database_url: PostgreSQL connection string
         """
         self.database_url = database_url or os.getenv(
-            'POSTGRES_URL',
+            'DATABASE_URL',
             'postgresql://trading_user:changeme123@localhost:5432/trading_db'
         )
         
