@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer  # Removed for DigitalOcean
 import structlog
 
 logger = structlog.get_logger()
@@ -27,7 +27,8 @@ class MarketStateEncoder:
         Args:
             model_name: Sentence transformer model for semantic embeddings
         """
-        self.model = SentenceTransformer(model_name)
+        # self.model = SentenceTransformer(model_name)  # Removed for DigitalOcean
+        self.model = None  # Use statistical features only
         self.feature_names = []
         
         logger.info("MarketStateEncoder initialized", model=model_name)
@@ -184,7 +185,9 @@ class MarketStateEncoder:
         Returns:
             Embedding vector
         """
-        embedding = self.model.encode(description, convert_to_numpy=True)
+        # embedding = self.model.encode(description, convert_to_numpy=True)  # Removed for DigitalOcean
+        # Use statistical features instead of semantic embeddings
+        embedding = self.extract_statistical_features(ohlcv)
         return embedding.astype(np.float32)
     
     def encode_hybrid(

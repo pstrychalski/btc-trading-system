@@ -8,7 +8,7 @@ psycopg2-binary==2.9.9
 sqlalchemy==2.0.23
 structlog==23.2.0
 prometheus_client==0.19.0
-ta-lib==0.4.28
+# ta-lib==0.4.28  # Requires system libraries, removed for DigitalOcean
 requests==2.31.0
 matplotlib==3.8.2
 seaborn==0.13.0
