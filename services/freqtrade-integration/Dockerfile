@@ -1,36 +1,32 @@
-FROM freqtradeorg/freqtrade:stable
+FROM python:3.11-slim
 
-# Switch to root for installations
-USER root
+# Set working directory
+WORKDIR /app
 
-WORKDIR /freqtrade
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install additional Python dependencies
-COPY services/freqtrade-integration/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-# Create directories
-RUN mkdir -p /freqtrade/user_data/strategies \
-             /freqtrade/user_data/data \
-             /freqtrade/user_data/logs
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy strategy and configuration
-COPY services/freqtrade-integration/strategy.py /freqtrade/user_data/strategies/AIEnhancedStrategy.py
-COPY services/freqtrade-integration/config.json /freqtrade/config.json
-COPY services/freqtrade-integration/api.py /freqtrade/api.py
+# Copy application code
+COPY . .
 
-# Copy entrypoint script
-COPY services/freqtrade-integration/entrypoint.sh /freqtrade/entrypoint.sh
-RUN chmod +x /freqtrade/entrypoint.sh
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
-# Set ownership to ftuser
-RUN chown -R ftuser:ftuser /freqtrade
+# Expose port
+EXPOSE 8089
 
-# Switch back to ftuser
-USER ftuser
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8089/health || exit 1
 
-# Expose ports
-EXPOSE 8080 8008
-
-ENTRYPOINT ["/freqtrade/entrypoint.sh"]
-
+# Run the application
+CMD ["python", "api.py"]

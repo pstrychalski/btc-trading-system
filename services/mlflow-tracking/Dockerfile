@@ -1,21 +1,35 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create mlruns directory for local artifact storage
-RUN mkdir -p /app/mlruns
+# Copy application code
+COPY . .
 
-# Copy entrypoint script
-COPY entrypoint.sh .
+# Make entrypoint executable
 RUN chmod +x entrypoint.sh
 
-# Expose MLflow port (Railway will use PORT env var)
+# Create non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
 EXPOSE 5000
 
-# Start MLflow server
-ENTRYPOINT ["./entrypoint.sh"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
 
+# Run the application
+CMD ["./entrypoint.sh"]
