@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
     
     # Data Validation Service URL
-    validation_service_url: str = "http://localhost:8000"
+    validation_service_url: str = "http://data-validation:8082"
     
     class Config:
         env_file = ".env"

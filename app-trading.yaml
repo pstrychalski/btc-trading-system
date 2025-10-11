@@ -1,0 +1,124 @@
+name: btc-trading-system
+region: nyc
+services:
+  # 1. Data Validation Service
+  - name: data-validation
+    source_dir: services/data-validation
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "8082"
+    - key: DATABASE_URL
+      value: "${DATABASE_URL}"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    routes:
+    - path: /data-validation
+
+  # 2. MLflow Tracking Service
+  - name: mlflow-tracking
+    source_dir: services/mlflow-tracking
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: ./entrypoint.sh
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "5000"
+    - key: DATABASE_URL
+      value: "${DATABASE_URL}"
+    - key: ARTIFACT_ROOT
+      value: "/app/mlruns"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://localhost:5000"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    routes:
+    - path: /mlflow-tracking
+
+  # 3. Data Collector Service
+  - name: data-collector
+    source_dir: services/data-collector
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "8001"
+    - key: SYMBOLS
+      value: "BTCUSDT"
+    - key: INTERVALS
+      value: "1m"
+    - key: REDIS_URL
+      value: "${REDIS_URL}"
+    - key: VALIDATION_SERVICE_URL
+      value: "http://data-validation:8082"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    routes:
+    - path: /data-collector
+
+  # 4. Backtest Engine Service
+  - name: backtest-engine
+    source_dir: services/backtest-engine
+    github:
+      repo: pstrychalski/btc-trading-system
+      branch: main
+      deploy_on_push: true
+    run_command: uvicorn api:app --host 0.0.0.0 --port $PORT
+    environment_slug: python
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+    - key: PORT
+      value: "8003"
+    - key: DATABASE_URL
+      value: "${DATABASE_URL}"
+    - key: MLFLOW_TRACKING_URI
+      value: "http://mlflow-tracking:5000"
+    - key: ENVIRONMENT
+      value: "production"
+    health_check:
+      http_path: "/health"
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+    routes:
+    - path: /backtest-engine
