@@ -1,22 +1,9 @@
 #!/bin/bash
 set -e
 
-echo "🤖 Starting AI-Enhanced Freqtrade Bot..."
+echo "🤖 Starting AI-Enhanced Trading Bot API..."
 
-# Start Control API in background
-echo "📊 Starting Control API on port 8008..."
-python /freqtrade/api.py &
-
-# Wait a moment for API to start
-sleep 2
-
-# Start Freqtrade
-echo "🚀 Starting Freqtrade with AIEnhancedStrategy..."
-freqtrade trade \
-    --config /freqtrade/config.json \
-    --strategy AIEnhancedStrategy \
-    --logfile /freqtrade/user_data/logs/freqtrade.log
-
-# Keep container running
-wait
+# Start Control API
+echo "📊 Starting Control API on port $PORT..."
+uvicorn api:app --host 0.0.0.0 --port $PORT
 
