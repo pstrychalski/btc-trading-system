@@ -69,9 +69,10 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint"""
+    from datetime import datetime
     return {
         "status": "healthy",
-        "timestamp": "2025-01-01T00:00:00Z"
+        "timestamp": datetime.now().isoformat()
     }
 
 
