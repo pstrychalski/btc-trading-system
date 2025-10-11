@@ -505,8 +505,8 @@ class MovingAverageStrategy(bt.Strategy):
 @app.post("/backtest")
 async def run_backtest(
     strategy: str = "MovingAverage",
-    start_date: str = "2024-09-11",
-    end_date: str = "2024-10-11",
+    start_date: str = "2025-09-11",
+    end_date: str = "2025-10-11",
     initial_cash: float = 10000.0
 ):
     """Run simple backtest"""
@@ -521,12 +521,17 @@ async def run_backtest(
         SELECT timestamp, open, high, low, close, volume 
         FROM market_data 
         WHERE symbol = 'BTCUSDT' 
-        AND timestamp BETWEEN %s AND %s
+        AND timestamp BETWEEN %s::timestamp AND %s::timestamp
         ORDER BY timestamp
         """
         
         df = db_manager.execute_query(query, (start_date, end_date))
+        logger.info("Query executed", rows=len(df), start_date=start_date, end_date=end_date)
         if df.empty:
+            # Debug: check what data exists
+            debug_query = "SELECT COUNT(*) as total, MIN(timestamp) as min_date, MAX(timestamp) as max_date FROM market_data WHERE symbol = 'BTCUSDT'"
+            debug_df = db_manager.execute_query(debug_query)
+            logger.error("No data found", debug_info=debug_df.to_dict('records')[0] if not debug_df.empty else "No debug data")
             raise HTTPException(status_code=404, detail="No data found for the specified period")
         
         # Create Backtrader data feed

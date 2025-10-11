@@ -147,7 +147,26 @@ class MarketDataValidator:
         
         for exp in expectations:
             try:
-                self.suite.add_expectation(**exp)
+                # Use the new Great Expectations API
+                expectation_type = exp["expectation_type"]
+                kwargs = exp["kwargs"]
+                
+                if expectation_type == "expect_column_to_exist":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnToExist(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_not_be_null":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToNotBeNull(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_be_between":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToBeBetween(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_be_unique":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToBeUnique(**kwargs)
+                    )
             except Exception as e:
                 logger.warning(f"Failed to add expectation: {exp['expectation_type']}", error=str(e))
     
@@ -178,7 +197,26 @@ class MarketDataValidator:
         
         for exp in expectations:
             try:
-                self.suite.add_expectation(**exp)
+                # Use the new Great Expectations API
+                expectation_type = exp["expectation_type"]
+                kwargs = exp["kwargs"]
+                
+                if expectation_type == "expect_column_to_exist":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnToExist(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_not_be_null":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToNotBeNull(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_be_between":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToBeBetween(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_be_unique":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToBeUnique(**kwargs)
+                    )
             except Exception as e:
                 logger.warning(f"Failed to add expectation: {exp['expectation_type']}", error=str(e))
     
@@ -207,7 +245,26 @@ class MarketDataValidator:
         
         for exp in expectations:
             try:
-                self.suite.add_expectation(**exp)
+                # Use the new Great Expectations API
+                expectation_type = exp["expectation_type"]
+                kwargs = exp["kwargs"]
+                
+                if expectation_type == "expect_column_to_exist":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnToExist(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_not_be_null":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToNotBeNull(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_be_between":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToBeBetween(**kwargs)
+                    )
+                elif expectation_type == "expect_column_values_to_be_unique":
+                    self.suite.add_expectation(
+                        gx.expectations.ExpectColumnValuesToBeUnique(**kwargs)
+                    )
             except Exception as e:
                 logger.warning(f"Failed to add expectation: {exp['expectation_type']}", error=str(e))
     
