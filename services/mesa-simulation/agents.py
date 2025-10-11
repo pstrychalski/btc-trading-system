@@ -1,9 +1,8 @@
 """
-Trading Agents for Mesa Simulation
+Trading Agents for Simple Simulation
 Different agent types with various strategies
 """
 import numpy as np
-from mesa import Agent
 from enum import Enum
 import structlog
 
@@ -20,11 +19,12 @@ class AgentType(Enum):
     NOISE = "noise"
 
 
-class BaseTrader(Agent):
+class BaseTrader:
     """Base trading agent"""
     
     def __init__(self, unique_id, model, agent_type: AgentType, initial_cash: float = 10000):
-        super().__init__(unique_id, model)
+        self.unique_id = unique_id
+        self.model = model
         self.agent_type = agent_type
         self.cash = initial_cash
         self.position = 0  # Number of shares held

@@ -1,12 +1,9 @@
 """
-Mesa Market Model
+Simple Market Model
 Agent-based market simulation
 """
 import numpy as np
 import pandas as pd
-from mesa import Model
-from mesa.time import RandomActivation
-from mesa.datacollection import DataCollector
 import structlog
 
 from agents import create_agent
@@ -14,7 +11,7 @@ from agents import create_agent
 logger = structlog.get_logger()
 
 
-class MarketModel(Model):
+class MarketModel:
     """Agent-based market simulation model"""
     
     def __init__(
@@ -33,9 +30,9 @@ class MarketModel(Model):
             price_volatility: Random price volatility
             external_data: External price data (optional)
         """
-        super().__init__()
+        # Simple initialization without mesa
         self.n_agents = n_agents
-        self.schedule = RandomActivation(self)
+        self.agents = []
         
         # Price dynamics
         self.price_history = [initial_price]
@@ -57,20 +54,12 @@ class MarketModel(Model):
         self._create_agents(agent_distribution)
         
         # Data collector
-        self.datacollector = DataCollector(
-            model_reporters={
-                "Price": lambda m: m.get_current_price(),
-                "Volume": lambda m: m.get_volume(),
-                "Total_Wealth": lambda m: m.get_total_wealth(),
-                "Bid_Ask_Spread": lambda m: m.get_spread()
-            },
-            agent_reporters={
-                "Wealth": lambda a: a.get_wealth(a.model.get_current_price()),
-                "Position": "position",
-                "PnL": "pnl",
-                "Type": lambda a: a.agent_type.value
-            }
-        )
+        self.datacollector = {
+            "Price": self.get_current_price,
+            "Volume": self.get_volume,
+            "Total_Wealth": self.get_total_wealth,
+            "Bid_Ask_Spread": self.get_spread
+        }
         
         logger.info(f"MarketModel initialized with {n_agents} agents")
     

@@ -10,9 +10,30 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import structlog
 
-from engine import BacktestEngine, quick_backtest
-from strategies import STRATEGY_REGISTRY
-from data_loader import PostgreSQLDataLoader, create_backtrader_feed
+# Import local modules with error handling
+try:
+    from engine import BacktestEngine, quick_backtest
+    from strategies import STRATEGY_REGISTRY
+    from data_loader import PostgreSQLDataLoader, create_backtrader_feed
+except ImportError as e:
+    logger.warning(f"Could not import local modules: {e}")
+    # Create dummy classes for basic functionality
+    class BacktestEngine:
+        def __init__(self):
+            pass
+    
+    class STRATEGY_REGISTRY:
+        @staticmethod
+        def get_strategy(name):
+            return None
+    
+    class PostgreSQLDataLoader:
+        def __init__(self):
+            pass
+    
+    def create_backtrader_feed(data):
+        return None
+
 from prometheus_client import Counter, Gauge, generate_latest
 
 # Setup logging

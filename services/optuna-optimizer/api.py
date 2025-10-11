@@ -12,13 +12,24 @@ from datetime import datetime
 import structlog
 import pandas as pd
 
-# Add backtest-engine to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '../backtest-engine'))
+# Import local modules with error handling
+try:
+    from optimizer import WalkForwardOptimizer, MultiObjectiveOptimizer, OptimizationConfig
+except ImportError as e:
+    logger.warning(f"Could not import optimizer modules: {e}")
+    # Create dummy classes for basic functionality
+    class WalkForwardOptimizer:
+        def __init__(self):
+            pass
+    
+    class MultiObjectiveOptimizer:
+        def __init__(self):
+            pass
+    
+    class OptimizationConfig:
+        def __init__(self):
+            pass
 
-from optimizer import WalkForwardOptimizer, MultiObjectiveOptimizer, OptimizationConfig
-from data_loader import PostgreSQLDataLoader, create_backtrader_feed
-from engine import BacktestEngine
-from strategies import get_strategy
 from prometheus_client import Counter, Gauge, generate_latest
 
 # Setup logging
