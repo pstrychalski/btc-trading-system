@@ -115,7 +115,7 @@ async def lifespan(app: FastAPI):
         logger.info("CoinGecko collector initialized as fallback")
     
     # Start collector in background
-    collector_task = asyncio.create_task(collector.start_collection())
+    collector_task = asyncio.create_task(collector.start())
     collector_running.set(1)
     
     logger.info("application_started")
